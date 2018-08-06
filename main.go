@@ -14,15 +14,10 @@ gohack -u $module
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"time"
 
 	"golang.org/x/tools/go/vcs"
 	"gopkg.in/errgo.v2/fmt/errors"
@@ -33,30 +28,8 @@ var (
 	dryRun        = flag.Bool("n", false, "print but do not execute update commands")
 	forceClean    = flag.Bool("force-clean", false, "force cleaning of modified-but-not-committed repositories. Do not use this flag unless you really need to!")
 	undo          = flag.Bool("u", false, "undo gohack replace")
+	// TODO add a flag to enable checkout of source only without VCS information.
 )
-
-type Module struct {
-	Path     string       // module path
-	Version  string       // module version
-	Versions []string     // available module versions (with -versions)
-	Replace  *Module      // replaced by this module
-	Time     *time.Time   // time version was created
-	Update   *Module      // available update, if any (with -u)
-	Main     bool         // is this the main module?
-	Indirect bool         // is this module only an indirect dependency of main module?
-	Dir      string       // directory holding files for this module, if any
-	GoMod    string       // path to go.mod file for this module, if any
-	Error    *ModuleError // error loading module
-}
-
-type ModuleError struct {
-	Err string // the error itself
-}
-
-type replacement struct {
-	module string
-	dir    string
-}
 
 var (
 	exitCode = 0
@@ -66,6 +39,25 @@ var (
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: gohack module...\n")
+		flag.PrintDefaults()
+		fmt.Print(`
+The gohack command checks out Go module dependencies
+into a directory where they can be edited.
+By default it extracts module source code into $HOME/gohack/<module>.
+It also tries to check out the version control information into that
+directory and update it to the expected version. If the directory
+already exists, it will be updated in place.
+
+With no arguments, gohack prints all modules
+that are currently replaced by local directories.
+
+The -u flag can be used to revert to the non-gohacked
+module versions. It only removes the relevant replace
+statements from the go.mod file - it does not change any
+of the directories referred to. With the -u flag and no
+arguments, all replace statements that refer to directories will
+be removed.
+`)
 		os.Exit(2)
 	}
 	flag.Parse()
@@ -83,6 +75,9 @@ func main1() error {
 	}
 	if *undo {
 		return undoReplace(flag.Args())
+	}
+	if len(flag.Args()) == 0 {
+		return printReplacementInfo()
 	}
 	var repls []*moduleVCSInfo
 	mods, err := allModules()
@@ -129,14 +124,43 @@ func main1() error {
 }
 
 func undoReplace(modules []string) error {
+	if len(modules) == 0 {
+		// With no modules specified, we un-gohack all modules
+		// we can find with local directory info in the go.mod file.
+		m, err := goModInfo()
+		if err != nil {
+			return errors.Wrap(err)
+		}
+		for _, r := range m.Replace {
+			if r.Old.Version == "" && r.New.Version == "" {
+				modules = append(modules, r.Old.Path)
+			}
+		}
+	}
 	// TODO get information from go.mod to make sure we're
 	// dropping a directory replace, not some other kind of replacement.
 	args := []string{"mod", "edit"}
 	for _, m := range modules {
 		args = append(args, "-dropreplace="+m)
 	}
-	if _, err := runCmd("go", cwd, args...); err != nil {
+	if _, err := runCmd(cwd, "go", args...); err != nil {
 		return errors.Notef(err, nil, "failed to remove go.mod replacements")
+	}
+	for _, m := range modules {
+		fmt.Printf("dropped %s\n", m)
+	}
+	return nil
+}
+
+func printReplacementInfo() error {
+	m, err := goModInfo()
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	for _, r := range m.Replace {
+		if r.Old.Version == "" && r.New.Version == "" {
+			fmt.Printf("%s => %s\n", r.Old.Path, r.New.Path)
+		}
 	}
 	return nil
 }
@@ -156,6 +180,12 @@ func replace(repls []*moduleVCSInfo) error {
 }
 
 func updateModule(info *moduleVCSInfo) error {
+	// TODO create a go.mod file in the destination directory if one
+	// does not already exist, because otherwise it can't be used.
+	// That makes the clean-checking logic harder though; a simpler
+	// (though probably annoying) approach might be to just
+	// disallow gohack on any module without a go.mod file.
+
 	if info.alreadyExists && !info.clean && *forceClean {
 		if err := info.vcs.Clean(info.dir); err != nil {
 			return fmt.Errorf("cannot clean: %v", err)
@@ -203,16 +233,25 @@ func createRepo(info *moduleVCSInfo) error {
 }
 
 type moduleVCSInfo struct {
-	module        *Module
+	// module holds the module information as printed by go list.
+	module *listModule
+	// alreadyExists holds whether the replacement directory already exists.
 	alreadyExists bool
-	dir           string
-	root          *vcs.RepoRoot
-	vcs           VCS
-	// VCSInfo is only filled in when alreadyExists is true.
+	// dir holds the path to the replacement directory.
+	dir string
+	// root holds information on the VCS root of the module.
+	root *vcs.RepoRoot
+	// vcs holds the implementation of the VCS used by the module.
+	vcs VCS
+	// VCSInfo holds information on the VCS tree in the replacement
+	// directory. It is only filled in when alreadyExists is true.
 	VCSInfo
 }
 
-func getVCSInfoForModule(m *Module) (*moduleVCSInfo, error) {
+// getVCSInfoForModule returns VCS information about the module
+// by inspecting the module path and the module's checked out
+// directory.
+func getVCSInfoForModule(m *listModule) (*moduleVCSInfo, error) {
 	// TODO if module directory already exists, could look in it to see if there's
 	// a single VCS directory and use that if so, to avoid hitting the network
 	// for vanity imports.
@@ -247,34 +286,6 @@ func getVCSInfoForModule(m *Module) (*moduleVCSInfo, error) {
 		return nil, errors.Notef(err, nil, "cannot get VCS info from %q", dir)
 	}
 	return info, nil
-}
-
-// allModules returns information on all the modules used by the root module.
-func allModules() (map[string]*Module, error) {
-	var buf bytes.Buffer
-	c := exec.Command("go", "list", "-m", "-json", "all")
-	c.Stderr = os.Stderr
-	c.Stdout = &buf
-	err := c.Run()
-	if err != nil {
-		return nil, errors.Notef(err, nil, "cannot list all modules")
-	}
-	dec := json.NewDecoder(&buf)
-	mods := make(map[string]*Module)
-	for {
-		var m Module
-		if err := dec.Decode(&m); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errors.Wrap(err)
-		}
-		if mods[m.Path] != nil {
-			return nil, errors.Newf("duplicate module %q in go list output", m.Path)
-		}
-		mods[m.Path] = &m
-	}
-	return mods, nil
 }
 
 // moduleDir returns the path to the directory to be
