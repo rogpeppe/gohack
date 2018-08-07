@@ -89,7 +89,7 @@ func main1() error {
 	for _, mpath := range flag.Args() {
 		m := mods[mpath]
 		if m == nil {
-			errorf("module %q does not appear to be in use", m)
+			errorf("module %q does not appear to be in use", mpath)
 			continue
 		}
 		if m.Replace != nil {
@@ -102,7 +102,7 @@ func main1() error {
 		}
 		info, err := getVCSInfoForModule(m)
 		if err != nil {
-			errorf("cannot get info for %q: %v", err)
+			errorf("cannot get info for %q: %v", m.Path, err)
 			continue
 		}
 		if err := updateModule(info); err != nil {
@@ -303,7 +303,7 @@ func errorf(f string, a ...interface{}) {
 	fmt.Fprintln(os.Stderr, fmt.Sprintf(f, a...))
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
-			fmt.Fprintln(os.Stderr, "error: %s\n", errors.Details(err))
+			fmt.Fprintf(os.Stderr, "error: %s\n", errors.Details(err))
 		}
 	}
 	exitCode = 1
