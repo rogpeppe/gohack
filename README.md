@@ -2,7 +2,7 @@
 
 The new Go module system is awesome. It ensures repeatable, deterministic
 builds of Go code. External module code is cached locally in a read-only
-directory, which is great for reproducibility, but if you're used to the
+directory, which is great for reproducibility. But if you're used to the
 global mutable namespace that is `$GOPATH`, there's an obvious question:
 what if I'm hacking on my program and I *want* to change one of those
 external modules?
@@ -19,13 +19,17 @@ Luckily the modules system provides a way around this: you can add a
 of a directory holding a module for the readonly cached copy. You can of
 course do this manually, but gohack aims to make this process pain-free.
 
-To make a mutable checkout of a module, say example.com/foo/bar run:
+Install gohack with:
+
+	go get github.com/rogpeppe/gohack
+
+To make a mutable checkout of a module, say `example.com/foo/bar`, run:
 
 	gohack example.com/foo/bar
 
 This will clone the module's repository to
-$HOME/gohack/example.com/foo/bar, check out the correct version of the
-source code there, and add a replace statement to the local `go.mod` file:
+`$HOME/gohack/example.com/foo/bar`, check out the correct version of the
+source code there, and add a replace directive in the local `go.mod` file:
 
 	replace example.com/foo/bar /home/rog/gohack/example.com/foo/bar
 
