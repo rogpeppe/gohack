@@ -16,10 +16,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/rogpeppe/gohack/internal/dirhash"
 	"golang.org/x/tools/go/vcs"
 	"gopkg.in/errgo.v2/fmt/errors"
 )
@@ -29,7 +32,7 @@ var (
 	dryRun        = flag.Bool("n", false, "print but do not execute update commands")
 	forceClean    = flag.Bool("force-clean", false, "force cleaning of modified-but-not-committed repositories. Do not use this flag unless you really need to!")
 	undo          = flag.Bool("u", false, "undo gohack replace")
-	// TODO add a flag to enable checkout of source only without VCS information.
+	quick         = flag.Bool("q", false, "quick mode; copy only source only without VCS information")
 )
 
 var (
@@ -80,7 +83,7 @@ func main1() error {
 	if len(flag.Args()) == 0 {
 		return printReplacementInfo()
 	}
-	var repls []*moduleVCSInfo
+	var repls []*modReplace
 	mods, err := allModules()
 	if err != nil {
 		// TODO this happens when a replacement directory has been removed.
@@ -95,28 +98,38 @@ func main1() error {
 		}
 		if m.Replace != nil {
 			if m.Replace.Path == m.Replace.Dir {
+				// TODO update to the current version instead of printing an error?
+				// That would allow us to (for example) upgrade from quick mode to VCS mode
+				// for a given module.
 				errorf("%q is already replaced by %q - are you already gohacking it?", mpath, m.Replace.Dir)
 			} else {
 				errorf("%q is already replaced; will not override replace statement in go.mod", mpath)
 			}
 			continue
 		}
-		info, err := getVCSInfoForModule(m)
-		if err != nil {
-			errorf("cannot get info for %q: %v", m.Path, err)
-			continue
-		}
-		if err := updateModule(info); err != nil {
-			errorf("cannot update %q: %v", m.Path, err)
-			continue
+		var repl *modReplace
+		if *quick {
+			repl1, err := updateFromLocalDir(m)
+			if err != nil {
+				errorf("cannot update %s from local cache: %v", m.Path, err)
+				continue
+			}
+			repl = repl1
+		} else {
+			repl1, err := updateVCSDir(m)
+			if err != nil {
+				errorf("cannot update VCS dir: %v", err)
+				continue
+			}
+			repl = repl1
 		}
 		// Automatically generate a go.mod file if one doesn't
 		// already exist, because otherwise the directory cannot be
 		// used as a module.
-		if err := ensureGoModFile(info); err != nil {
+		if err := ensureGoModFile(repl.modulePath, repl.dir); err != nil {
 			errorf("%v", err)
 		}
-		repls = append(repls, info)
+		repls = append(repls, repl)
 	}
 	if len(repls) == 0 {
 		return errors.New("all modules failed; not replacing anything")
@@ -125,9 +138,144 @@ func main1() error {
 		errorf("cannot replace: %v", err)
 	}
 	for _, info := range repls {
-		fmt.Printf("%s => %s\n", info.module.Path, info.dir)
+		fmt.Printf("%s => %s\n", info.modulePath, info.dir)
 	}
 	return nil
+}
+
+func updateFromLocalDir(m *listModule) (*modReplace, error) {
+	if m.Dir == "" {
+		return nil, errors.Newf("no local source code found")
+	}
+	srcHash, err := hashDir(m.Dir)
+	if err != nil {
+		return nil, errors.Notef(err, nil, "cannot hash %q", m.Dir)
+	}
+	destDir := moduleDir(m.Path)
+	_, err = os.Stat(destDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, errors.Wrap(err)
+	}
+	repl := &modReplace{
+		modulePath: m.Path,
+		dir:        destDir,
+	}
+	if err != nil {
+		// Destination doesn't exist. Copy the entire directory.
+		if err := copyFile(destDir, m.Dir); err != nil {
+			return nil, errors.Wrap(err)
+		}
+	} else {
+		if !*forceClean {
+			// Destination already exists; try to update it.
+			isEmpty, err := isEmptyDir(destDir)
+			if err != nil {
+				return nil, errors.Wrap(err)
+			}
+			if !isEmpty {
+				// The destination directory already exists and has something in.
+				destHash, err := checkCleanWithoutVCS(destDir)
+				if err != nil {
+					return nil, errors.Wrap(err)
+				}
+				if destHash == srcHash {
+					// Everything is exactly as we want it already.
+					return repl, nil
+				}
+			}
+		}
+		// As it's empty, clean or we're forcing clean, we can safely replace its
+		// contents with the current version.
+		if err := updateDirWithoutVCS(destDir, m.Dir); err != nil {
+			return nil, errors.Notef(err, nil, "cannot update %q from %q", destDir, m.Dir)
+		}
+	}
+	// Write a hash file so we can tell if someone has changed the
+	// directory later, so we avoid overwriting their changes.
+	if err := writeHashFile(destDir, srcHash); err != nil {
+		return nil, errors.Wrap(err)
+	}
+	return repl, nil
+}
+
+func checkCleanWithoutVCS(dir string) (hash string, err error) {
+	wantHash, err := readHashFile(dir)
+	if err != nil {
+		if !os.IsNotExist(errors.Cause(err)) {
+			return "", errors.Wrap(err)
+		}
+		return "", errors.Newf("%q already exists; not overwriting", dir)
+	}
+	gotHash, err := hashDir(dir)
+	if err != nil {
+		return "", errors.Notef(err, nil, "cannot hash %q", dir)
+	}
+	if gotHash != wantHash {
+		return "", errors.Newf("%q is not clean; not overwriting", dir)
+	}
+	return wantHash, nil
+}
+
+func updateDirWithoutVCS(destDir, srcDir string) error {
+	if err := os.RemoveAll(destDir); err != nil {
+		return errors.Wrap(err)
+	}
+	if err := copyFile(destDir, srcDir); err != nil {
+		return errors.Wrap(err)
+	}
+	return nil
+}
+
+// hashDir is like dirhash.HashDir except that it ignores the
+// gohack hash file in the top level directory.
+func hashDir(dir string) (string, error) {
+	files, err := dirhash.DirFiles(dir, "")
+	if err != nil {
+		return "", err
+	}
+	j := 0
+	for _, f := range files {
+		if f != hashFile {
+			files[j] = f
+			j++
+		}
+	}
+	files = files[:j]
+	return dirhash.Hash1(files, func(name string) (io.ReadCloser, error) {
+		return os.Open(filepath.Join(dir, name))
+	})
+}
+
+// TODO decide on a good name for this.
+const hashFile = ".gohack-modhash"
+
+func readHashFile(dir string) (string, error) {
+	data, err := ioutil.ReadFile(filepath.Join(dir, hashFile))
+	if err != nil {
+		return "", errors.Note(err, os.IsNotExist, "")
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+func writeHashFile(dir string, hash string) error {
+	if err := ioutil.WriteFile(filepath.Join(dir, hashFile), []byte(hash), 0666); err != nil {
+		return errors.Wrap(err)
+	}
+	return nil
+}
+
+func updateVCSDir(m *listModule) (*modReplace, error) {
+	info, err := getVCSInfoForModule(m)
+	if err != nil {
+		return nil, errors.Notef(err, nil, "cannot get info for %q", m.Path)
+	}
+	if err := updateModule(info); err != nil {
+		return nil, errors.Notef(err, nil, "cannot update %q", m.Path)
+	}
+	return &modReplace{
+		modulePath: m.Path,
+		dir:        info.dir,
+	}, nil
 }
 
 func undoReplace(modules []string) error {
@@ -172,13 +320,18 @@ func printReplacementInfo() error {
 	return nil
 }
 
-func replace(repls []*moduleVCSInfo) error {
+type modReplace struct {
+	modulePath string
+	dir        string
+}
+
+func replace(repls []*modReplace) error {
 	args := []string{
 		"mod", "edit",
 	}
 	for _, info := range repls {
 		// TODO should we use relative path here?
-		args = append(args, fmt.Sprintf("-replace=%s=%s", info.module.Path, info.dir))
+		args = append(args, fmt.Sprintf("-replace=%s=%s", info.modulePath, info.dir))
 	}
 	if _, err := runUpdateCmd(cwd, "go", args...); err != nil {
 		return errors.Wrap(err)
@@ -209,7 +362,7 @@ func updateModule(info *moduleVCSInfo) error {
 		updateTo = revID
 	}
 	if err := info.vcs.Update(info.dir, isTag, updateTo); err == nil {
-		fmt.Printf("updated hack version of %s to %s", info.module.Path, info.module.Version)
+		fmt.Printf("updated hack version of %s to %s\n", info.module.Path, info.module.Version)
 		return nil
 	}
 	if !info.alreadyExists {
@@ -299,7 +452,7 @@ func getVCSInfoForModule(m *listModule) (*moduleVCSInfo, error) {
 	}
 	if removedGoMod {
 		// We removed the autogenerated go.mod file so add it back again.
-		if err := ensureGoModFile(info); err != nil {
+		if err := ensureGoModFile(info.module.Path, info.dir); err != nil {
 			return nil, errors.Wrap(err)
 		}
 	}
@@ -317,22 +470,26 @@ func moduleDir(module string) string {
 	return filepath.Join(d, filepath.FromSlash(module))
 }
 
+const debug = false
+
 func errorf(f string, a ...interface{}) {
 	fmt.Fprintln(os.Stderr, fmt.Sprintf(f, a...))
-	for _, arg := range a {
-		if err, ok := arg.(error); ok {
-			fmt.Fprintf(os.Stderr, "error: %s\n", errors.Details(err))
+	if debug {
+		for _, arg := range a {
+			if err, ok := arg.(error); ok {
+				fmt.Fprintf(os.Stderr, "error: %s\n", errors.Details(err))
+			}
 		}
 	}
 	exitCode = 1
 }
 
-func ensureGoModFile(m *moduleVCSInfo) error {
-	modFile := filepath.Join(m.dir, "go.mod")
+func ensureGoModFile(modPath, dir string) error {
+	modFile := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(modFile); err == nil {
 		return nil
 	}
-	if err := ioutil.WriteFile(modFile, []byte(autoGoMod(m.module.Path)), 0666); err != nil {
+	if err := ioutil.WriteFile(modFile, []byte(autoGoMod(modPath)), 0666); err != nil {
 		return errors.Wrap(err)
 	}
 	return nil
@@ -364,4 +521,84 @@ func removeAutoGoMod(m *moduleVCSInfo) (bool, error) {
 // path.
 func autoGoMod(mpath string) string {
 	return "// Generated by gohack; DO NOT EDIT.\nmodule " + mpath + "\n"
+}
+
+func isEmptyDir(dir string) (bool, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return false, errors.Wrap(err)
+	}
+	defer f.Close()
+	_, err = f.Readdir(1)
+	if err != nil && err != io.EOF {
+		return false, errors.Wrap(err)
+	}
+	return err == io.EOF, nil
+}
+
+func copyFile(dst, src string) error {
+	srcInfo, srcErr := os.Lstat(src)
+	if srcErr != nil {
+		return errors.Wrap(srcErr)
+	}
+	_, dstErr := os.Lstat(dst)
+	if dstErr == nil {
+		return errors.Newf("will not overwrite %q", dst)
+	}
+	if !os.IsNotExist(dstErr) {
+		return errors.Wrap(dstErr)
+	}
+	switch mode := srcInfo.Mode(); mode & os.ModeType {
+	case os.ModeSymlink:
+		return errors.Newf("will not copy symbolic link")
+	case os.ModeDir:
+		return copyDir(dst, src)
+	case 0:
+		return copyFile1(dst, src)
+	default:
+		return fmt.Errorf("cannot copy file with mode %v", mode)
+	}
+}
+
+func copyFile1(dst, src string) error {
+	srcf, err := os.Open(src)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	defer srcf.Close()
+	dstf, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	defer dstf.Close()
+	if _, err := io.Copy(dstf, srcf); err != nil {
+		return fmt.Errorf("cannot copy %q to %q: %v", src, dst, err)
+	}
+	return nil
+}
+
+func copyDir(dst, src string) error {
+	srcf, err := os.Open(src)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	defer srcf.Close()
+	if err := os.Mkdir(dst, 0777); err != nil {
+		return errors.Wrap(err)
+	}
+	for {
+		names, err := srcf.Readdirnames(100)
+		for _, name := range names {
+			if err := copyFile(filepath.Join(dst, name), filepath.Join(src, name)); err != nil {
+				return errors.Wrap(err)
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Newf("error reading directory %q: %v", src, err)
+		}
+	}
+	return nil
 }

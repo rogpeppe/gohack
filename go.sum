@@ -7,5 +7,5 @@ golang.org/x/tools v0.0.0-20180803180156-3c07937fe18c h1:Z6Xcg33osoOLCiz/EFPHedK
 golang.org/x/tools v0.0.0-20180803180156-3c07937fe18c/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/errgo.v2 v2.0.0-20170712173524-1404b2ffbca4 h1:0hlFZ0xRCsJWzb0XLA/4d/8FhV5Apv49DK8266TAOi0=
-gopkg.in/errgo.v2 v2.0.0-20170712173524-1404b2ffbca4/go.mod h1:e2+3YDPGA8XJ8Lk+bKAvy+3jAR1cSuuG8+hJ3GeqXI8=
+gopkg.in/errgo.v2 v2.0.1 h1:CgqZXIkG0gbG2ftc+1BN2aSjFD4py1iAxxJZheiGFes=
+gopkg.in/errgo.v2 v2.0.1/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
