@@ -22,9 +22,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rogpeppe/gohack/internal/dirhash"
 	"golang.org/x/tools/go/vcs"
 	"gopkg.in/errgo.v2/fmt/errors"
+
+	"github.com/rogpeppe/gohack/internal/dirhash"
 )
 
 var (
@@ -118,7 +119,7 @@ func main1() error {
 		} else {
 			repl1, err := updateVCSDir(m)
 			if err != nil {
-				errorf("cannot update VCS dir: %v", err)
+				errorf("cannot update VCS dir for %s: %v", m.Path, err)
 				continue
 			}
 			repl = repl1
@@ -162,7 +163,7 @@ func updateFromLocalDir(m *listModule) (*modReplace, error) {
 	}
 	if err != nil {
 		// Destination doesn't exist. Copy the entire directory.
-		if err := copyFile(destDir, m.Dir); err != nil {
+		if err := copyAll(destDir, m.Dir); err != nil {
 			return nil, errors.Wrap(err)
 		}
 	} else {
@@ -220,7 +221,7 @@ func updateDirWithoutVCS(destDir, srcDir string) error {
 	if err := os.RemoveAll(destDir); err != nil {
 		return errors.Wrap(err)
 	}
-	if err := copyFile(destDir, srcDir); err != nil {
+	if err := copyAll(destDir, srcDir); err != nil {
 		return errors.Wrap(err)
 	}
 	return nil
@@ -267,10 +268,10 @@ func writeHashFile(dir string, hash string) error {
 func updateVCSDir(m *listModule) (*modReplace, error) {
 	info, err := getVCSInfoForModule(m)
 	if err != nil {
-		return nil, errors.Notef(err, nil, "cannot get info for %q", m.Path)
+		return nil, errors.Notef(err, nil, "cannot get info")
 	}
 	if err := updateModule(info); err != nil {
-		return nil, errors.Notef(err, nil, "cannot update %q", m.Path)
+		return nil, errors.Wrap(err)
 	}
 	return &modReplace{
 		modulePath: m.Path,
@@ -536,7 +537,7 @@ func isEmptyDir(dir string) (bool, error) {
 	return err == io.EOF, nil
 }
 
-func copyFile(dst, src string) error {
+func copyAll(dst, src string) error {
 	srcInfo, srcErr := os.Lstat(src)
 	if srcErr != nil {
 		return errors.Wrap(srcErr)
@@ -554,13 +555,13 @@ func copyFile(dst, src string) error {
 	case os.ModeDir:
 		return copyDir(dst, src)
 	case 0:
-		return copyFile1(dst, src)
+		return copyFile(dst, src)
 	default:
 		return fmt.Errorf("cannot copy file with mode %v", mode)
 	}
 }
 
-func copyFile1(dst, src string) error {
+func copyFile(dst, src string) error {
 	srcf, err := os.Open(src)
 	if err != nil {
 		return errors.Wrap(err)
@@ -589,7 +590,7 @@ func copyDir(dst, src string) error {
 	for {
 		names, err := srcf.Readdirnames(100)
 		for _, name := range names {
-			if err := copyFile(filepath.Join(dst, name), filepath.Join(src, name)); err != nil {
+			if err := copyAll(filepath.Join(dst, name), filepath.Join(src, name)); err != nil {
 				return errors.Wrap(err)
 			}
 		}
