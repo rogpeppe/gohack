@@ -8,7 +8,16 @@ import (
 
 var undoCommand = &Command{
 	Run:       cmdReplace,
+	Short:     "stop hacking a module",
 	UsageLine: "undo [-rm] [-f] [module...]",
+	Long: `
+The undo command can be used to revert to the non-gohacked
+module versions. It only removes the relevant replace
+statements from the go.mod file - it does not change any
+of the directories referred to. With no arguments, all replace
+statements that refer to directories will
+be removed.
+`[1:],
 }
 
 var (
