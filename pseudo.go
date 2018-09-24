@@ -42,7 +42,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rogpeppe/gohack/internal/semver"
+	"github.com/rogpeppe/modinternal/semver"
 )
 
 // PseudoVersion returns a pseudo-version for the given major version ("v1")

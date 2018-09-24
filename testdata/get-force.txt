@@ -1,0 +1,46 @@
+cd repo
+go get rsc.io/quote@v1.5.2
+env GOHACK=$WORK/gohack
+gohack get rsc.io/quote
+stdout '^rsc.io/quote => .*/gohack/rsc.io/quote$'
+! stderr .
+
+# Undo the gohack, leaving the source files in place.
+gohack undo rsc.io/quote
+! stderr .
+stdout '^dropped rsc.io/quote$'
+
+# Modify the hacked source.
+cp ../bogus.go $WORK/gohack/rsc.io/quote/bogus.go
+
+# When we get again, we can't get it because it's dirty
+! gohack get rsc.io/quote
+! stdout .
+stderr '^cannot update rsc.io/quote from local cache: ".*/gohack/rsc.io/quote" is not clean; not overwriting$'
+stderr '^all modules failed; not replacing anything$'
+
+# With the force flag, we can update it; the source directory will
+# be returned to its pristine state.
+gohack get -f rsc.io/quote
+stdout '^rsc.io/quote => .*/gohack/rsc.io/quote$'
+grep -count=1 '^replace rsc\.io/quote => .*/gohack/rsc.io/quote$' go.mod
+! exists $WORK/gohack/rsc.io/quote/bogus.go
+go install example.com/repo
+
+-- repo/main.go --
+package main
+import (
+	"fmt"
+	"rsc.io/quote"
+)
+
+func main() {
+	fmt.Println(quote.Glass())
+}
+
+-- repo/go.mod --
+module example.com/repo
+
+-- bogus.go --
+
+package wrong

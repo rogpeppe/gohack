@@ -3,6 +3,17 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+github.com/rogpeppe/modinternal v0.0.1 h1:hpe1cECJlJMQAYpBKDDIbdE7H9PXaJsAENMAU8kJg1o=
+github.com/rogpeppe/modinternal v0.0.1/go.mod h1:ZcNGa6Cs2EyQbmeye4rPuDZFEAwOFLCG0r6VrtwyI40=
+github.com/rogpeppe/modinternal v0.0.3 h1:HrvSARmfdlLJ4tDlWKDPadw0Ej3zu7H89D34XSHg7rs=
+github.com/rogpeppe/modinternal v0.0.3/go.mod h1:ZcNGa6Cs2EyQbmeye4rPuDZFEAwOFLCG0r6VrtwyI40=
+github.com/rogpeppe/modinternal v0.0.6 h1:zLBVnSqEVV5Xwuek9ppzvyWWIXpNjzoR327f/C72pzY=
+github.com/rogpeppe/modinternal v0.0.6/go.mod h1:ZcNGa6Cs2EyQbmeye4rPuDZFEAwOFLCG0r6VrtwyI40=
+github.com/rogpeppe/modinternal v0.0.7 h1:/PxrZHLvGRAT2GKI3zPoCLeKk2bT+5Xv71apuSJAr6k=
+github.com/rogpeppe/modinternal v0.0.7/go.mod h1:ZcNGa6Cs2EyQbmeye4rPuDZFEAwOFLCG0r6VrtwyI40=
+github.com/rogpeppe/testscript v0.0.0-20180926220844-0b67330a46da h1:rbSLBhYitduXznf2v/4dkVyLZU+9pecGFBmsJpbsDrA=
+github.com/rogpeppe/testscript v0.0.0-20180926220844-0b67330a46da/go.mod h1:7ODaa/ORb+fWYRrWHqrZjf6q5AKkENFAdj63LLMk7I4=
+github.com/rogpeppe/testscript v0.0.0-20180930071333-4b2ab58a1a5a/go.mod h1:7ODaa/ORb+fWYRrWHqrZjf6q5AKkENFAdj63LLMk7I4=
 golang.org/x/tools v0.0.0-20180803180156-3c07937fe18c h1:Z6Xcg33osoOLCiz/EFPHedK6zJ9nl1KK4WH/LlykMxs=
 golang.org/x/tools v0.0.0-20180803180156-3c07937fe18c/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e h1:FDhOuMEY4JVRztM/gsbk+IKUQ8kj74bxZrgw87eMMVc=
