@@ -63,27 +63,7 @@ var commands = []*Command{
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: gohack module...\n")
-		flag.PrintDefaults()
-		fmt.Print(`
-The gohack command checks out Go module dependencies
-into a directory where they can be edited.
-By default it extracts module source code into $HOME/gohack/<module>.
-By default, it also tries to check out the version control information into that
-directory and update it to the expected version. If the directory
-already exists, it will be updated in place.
-
-With no arguments, gohack prints all modules
-that are currently replaced by local directories.
-
-The -u flag can be used to revert to the non-gohacked
-module versions. It only removes the relevant replace
-statements from the go.mod file - it does not change any
-of the directories referred to. With the -u flag and no
-arguments, all replace statements that refer to directories will
-be removed.
-`)
-		os.Exit(2)
+		mainUsage(os.Stderr)
 	}
 	flag.Parse()
 	main1()
