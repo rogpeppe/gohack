@@ -25,7 +25,7 @@ Install gohack with:
 
 To make a mutable checkout of a module, say `example.com/foo/bar`, run:
 
-	gohack example.com/foo/bar
+	gohack get example.com/foo/bar
 
 This will clone the module's repository to
 `$HOME/gohack/example.com/foo/bar`, check out the correct version of the
@@ -36,11 +36,11 @@ source code there, and add a replace directive in the local `go.mod` file:
 Once you are done hacking and wish to revert to the immutable version, you
 can remove the replace statement with:
 
-	gohack -u example.com/foo/bar
+	gohack undo example.com/foo/bar
 
 or you can remove all gohack replace statements with:
 
-	gohack -u
+	gohack undo
 
 Note that undoing a replace does *not* remove the external module's
 directory - that stays around so your changes are not lost. For example,

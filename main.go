@@ -1,15 +1,9 @@
 /*
-gohack $module...
+The gohack command automates checking out a mutable copy
+of a module dependency and adding the relevant replace
+statement to the go.mod file.
 
-	fetch module if needed into $GOHACK/$module
-	checkout correct commit
-	"is not clean" failure if it's been changed but at right commit
-	"is not clean; will not update" failure if changed and at wrong commit
-	add replace statement to go.mod
-
-gohack -u $module
-
-	remove replace statement from go.mod
+See https://github.com/rogpeppe/gohack for more details.
 */
 package main
 
@@ -17,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/errgo.v2/fmt/errors"
 )
@@ -115,6 +110,13 @@ func main1() {
 	if cmdName == "help" {
 		runHelp(args)
 		os.Exit(0)
+	}
+	// Shortcut behaviour for get:
+	// all value module names contain a dot, so treat that
+	// as a proxy for the "get" shortcut.
+	if strings.Contains(cmdName, ".") {
+		args = append([]string{cmdName}, args...)
+		cmdName = "get"
 	}
 	for _, cmd := range commands {
 		if cmd.Name() != cmdName {

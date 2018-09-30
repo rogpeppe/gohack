@@ -12,6 +12,20 @@ import (
 
 var getCommand = &Command{
 	UsageLine: "get [-vcs] [-u] [-f] [module...]",
+	Short:     "start hacking a module",
+	Long: `
+The get command checks out Go module dependencies
+into a directory where they can be edited.
+
+It uses $HOME/gohack/<module> as the destination directory.
+(TODO implement directory overriding)
+
+By default it copies module source code from the existing
+source directory in $GOPATH/pkg/mod. If the -vcs
+flag is specified, it also checks out the version control information into that
+directory and updates it to the expected version. If the directory
+already exists, it will be updated in place.
+`[1:],
 }
 
 func init() {
