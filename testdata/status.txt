@@ -1,0 +1,28 @@
+cd repo
+go get rsc.io/quote@v1.5.2
+env GOHACK=$WORK/gohack
+gohack get rsc.io/quote
+
+gohack status
+! stderr .+
+stdout '^rsc.io/quote => .*/rsc\.io/quote$'
+
+-- repo/main.go --
+package main
+import (
+	"fmt"
+	"rsc.io/quote"
+	"rsc.io/sampler"
+)
+
+func main() {
+	sampler.DefaultUserPrefs()
+	fmt.Println(quote.Glass())
+}
+
+-- repo/go.mod --
+module example.com/repo
+
+replace (
+	rsc.io/sampler v1.3.0 => rsc.io/sampler v1.99.99
+)

@@ -69,7 +69,7 @@ func copyDir(dst, src string) error {
 		return errors.Wrap(err)
 	}
 	defer srcf.Close()
-	if err := os.Mkdir(dst, 0777); err != nil {
+	if err := os.MkdirAll(dst, 0777); err != nil {
 		return errors.Wrap(err)
 	}
 	for {

@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"strings"
 	"time"
 
+	"github.com/rogpeppe/modinternal/modfile"
 	"gopkg.in/errgo.v2/fmt/errors"
 )
 
@@ -28,15 +30,16 @@ type listModuleError struct {
 	Err string // the error itself
 }
 
-// allModules returns information on all the modules used by the root module.
-func allModules() (map[string]*listModule, error) {
+// listModules returns information on the given modules as used by the root module.
+func listModules(modules ...string) (mods map[string]*listModule, err error) {
 	// TODO make runCmd return []byte so we don't need the []byte conversion.
-	out, err := runCmd(cwd, "go", "list", "-m", "-json", "all")
+	args := append([]string{"list", "-m", "-json"}, modules...)
+	out, err := runCmd(cwd, "go", args...)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 	dec := json.NewDecoder(strings.NewReader(out))
-	mods := make(map[string]*listModule)
+	mods = make(map[string]*listModule)
 	for {
 		var m listModule
 		if err := dec.Decode(&m); err != nil {
@@ -53,38 +56,38 @@ func allModules() (map[string]*listModule, error) {
 	return mods, nil
 }
 
-// editGoMod holds module info as printed by go mod edit -json.
-type editGoMod struct {
-	Module  editModule
-	Require []editRequire
-	Exclude []editModule
-	Replace []editReplace
-}
-
-type editModule struct {
-	Path    string
-	Version string
-}
-
-type editRequire struct {
-	Path     string
-	Version  string
-	Indirect bool
-}
-
-type editReplace struct {
-	Old editModule
-	New editModule
-}
-
-func goModInfo() (*editGoMod, error) {
-	out, err := runCmd(cwd, "go", "mod", "edit", "-json")
+func goModInfo() (*modfile.File, error) {
+	// Get info on the current module so that we can find the
+	// path to the current go.mod file.
+	mods, err := listModules()
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
-	var m editGoMod
-	if err := json.Unmarshal([]byte(out), &m); err != nil {
+	if len(mods) != 1 {
+		return nil, errors.Newf("unexpected module list count (want 1 got %d)", len(mods))
+	}
+	var goModPath string
+	for _, m := range mods {
+		goModPath = m.GoMod
+	}
+	data, err := ioutil.ReadFile(goModPath)
+	if err != nil {
+		return nil, errors.Notef(err, nil, "cannot read current go.mod file")
+	}
+	modf, err := modfile.Parse(goModPath, data, nil)
+	if err != nil {
 		return nil, errors.Wrap(err)
 	}
-	return &m, nil
+	return modf, nil
+}
+
+func writeModFile(modf *modfile.File) error {
+	data, err := modf.Format()
+	if err != nil {
+		return errors.Notef(err, nil, "cannot generate go.mod file")
+	}
+	if err := ioutil.WriteFile(modf.Syntax.Name, data, 0666); err != nil {
+		return errors.Wrap(err)
+	}
+	return nil
 }

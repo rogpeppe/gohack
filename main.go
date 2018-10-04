@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"gopkg.in/errgo.v2/fmt/errors"
 )
@@ -90,13 +89,6 @@ func main1() {
 	if cmdName == "help" {
 		runHelp(args)
 		os.Exit(0)
-	}
-	// Shortcut behaviour for get:
-	// all value module names contain a dot, so treat that
-	// as a proxy for the "get" shortcut.
-	if strings.Contains(cmdName, ".") {
-		args = append([]string{cmdName}, args...)
-		cmdName = "get"
 	}
 	for _, cmd := range commands {
 		if cmd.Name() != cmdName {

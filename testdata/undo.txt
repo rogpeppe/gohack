@@ -1,0 +1,39 @@
+cd repo
+go get rsc.io/quote@v1.5.2
+env GOHACK=$WORK/gohack
+gohack get rsc.io/quote
+stdout '^rsc.io/quote => .*/gohack/rsc.io/quote$'
+! stderr .
+
+# Check that the replace statement is there.
+grep -count=1 '^replace rsc\.io/quote => .*/gohack/rsc.io/quote$' go.mod
+
+# undo the gohack and the replace statement should be removed.
+gohack undo rsc.io/quote
+! grep '^replace rsc\.io/quote => .*/gohack/rsc.io/quote$' go.mod
+
+# The source files should still be there though.
+grep '^' $WORK/gohack/rsc.io/quote/quote.go
+
+# If we modify the hacked version, the module should still
+# work OK (it's not using that version any more)
+cp ../bogus.go $WORK/gohack/rsc.io/quote/bogus.go
+go install example.com/repo
+
+-- repo/main.go --
+package main
+import (
+	"fmt"
+	"rsc.io/quote"
+)
+
+func main() {
+	fmt.Println(quote.Glass())
+}
+
+-- repo/go.mod --
+module example.com/repo
+
+-- bogus.go --
+
+package wrong
