@@ -43,10 +43,11 @@ var (
 	getVCS   = getCommand.Flag.Bool("vcs", false, "get VCS information too")
 )
 
-func runGet(cmd *Command, args []string) {
+func runGet(cmd *Command, args []string) int {
 	if err := runGet1(args); err != nil {
 		errorf("%v", err)
 	}
+	return 0
 }
 
 func runGet1(args []string) error {
@@ -370,11 +371,8 @@ func replaceModule(f *modfile.File, mod string, dir string) error {
 		}
 		// These checks shouldn't fail when checkCanReplace has been
 		// called previously, but check anyway just to be sure.
-		if found != nil {
-			return errors.Newf("found multiple existing replacements for %q", mod)
-		}
-		if r.New.Version == "" {
-			return errors.Newf("%s is already replaced by %s", mod, r.New.Path)
+		if found != nil || r.New.Version == "" {
+			panic(errors.Newf("unexpected bad replace for %q (checkCanReplace not called?)", mod))
 		}
 		found = r
 	}

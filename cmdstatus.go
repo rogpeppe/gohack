@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"gopkg.in/errgo.v2/fmt/errors"
 )
@@ -19,14 +18,15 @@ about only the specified modules.
 `[1:],
 }
 
-func cmdStatus(_ *Command, args []string) {
+func cmdStatus(_ *Command, args []string) int {
 	if len(args) > 0 {
 		errorf("explicit module status not yet implemented")
-		os.Exit(2)
+		return 2
 	}
 	if err := printReplacementInfo(); err != nil {
 		errorf("%v", err)
 	}
+	return 0
 }
 
 func printReplacementInfo() error {

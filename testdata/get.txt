@@ -3,7 +3,7 @@ go get rsc.io/quote@v1.5.2
 env GOHACK=$WORK/gohack
 gohack get rsc.io/quote
 stdout '^rsc.io/quote => .*/gohack/rsc.io/quote$'
-! stderr .
+! stderr .+
 
 # Check that the replace statement is there.
 grep -count=1 '^replace rsc\.io/quote => .*/gohack/rsc.io/quote$' go.mod

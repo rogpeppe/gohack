@@ -3,11 +3,11 @@ go get rsc.io/quote@v1.5.2
 env GOHACK=$WORK/gohack
 gohack get rsc.io/quote
 stdout '^rsc.io/quote => .*/gohack/rsc.io/quote$'
-! stderr .
+! stderr .+
 
 # Undo the gohack, leaving the source files in place.
 gohack undo rsc.io/quote
-! stderr .
+! stderr .+
 stdout '^dropped rsc.io/quote$'
 
 # Modify the hacked source.
@@ -15,7 +15,7 @@ cp ../bogus.go $WORK/gohack/rsc.io/quote/bogus.go
 
 # When we get again, we can't get it because it's dirty
 ! gohack get rsc.io/quote
-! stdout .
+! stdout .+
 stderr '^cannot update rsc.io/quote from local cache: ".*/gohack/rsc.io/quote" is not clean; not overwriting$'
 stderr '^all modules failed; not replacing anything$'
 

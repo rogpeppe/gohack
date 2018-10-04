@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 
@@ -14,22 +13,33 @@ import (
 var proxyURL string
 
 func TestMain(m *testing.M) {
-	testscript.RegisterCommand("gohack", main)
+	os.Exit(testscript.RunMain(gohackMain{m}, map[string]func() int{
+		"gohack": main1,
+	}))
+}
+
+type gohackMain struct {
+	m *testing.M
+}
+
+func (m gohackMain) Run() int {
 	if os.Getenv("GO_GCFLAGS") != "" {
 		fmt.Fprintf(os.Stderr, "testing: warning: no tests to run\n") // magic string for cmd/go
 		fmt.Printf("cmd/go test is not compatible with $GO_GCFLAGS being set\n")
 		fmt.Printf("SKIP\n")
-		return
+		return 0
 	}
 	os.Unsetenv("GOROOT_FINAL")
 
+	// Start the Go proxy server running for all tests.
 	srv, err := goproxytest.NewServer("testdata/mod", "")
 	if err != nil {
-		log.Fatal(err)
+		errorf("cannot start proxy: %v", err)
+		return 1
 	}
 	proxyURL = srv.URL
 
-	os.Exit(m.Run())
+	return m.m.Run()
 }
 
 func TestScripts(t *testing.T) {
