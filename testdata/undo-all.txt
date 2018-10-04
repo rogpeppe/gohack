@@ -5,7 +5,7 @@ env GOHACK=$WORK/gohack
 gohack get rsc.io/quote rsc.io/sampler
 stdout '^rsc.io/quote => .*/gohack/rsc.io/quote$'
 stdout '^rsc.io/sampler => .*/gohack/rsc.io/sampler$'
-! stderr .
+! stderr .+
 
 gohack undo
 stdout '^dropped rsc\.io/quote$'

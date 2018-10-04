@@ -61,15 +61,10 @@ var commands = []*Command{
 }
 
 func main() {
-	flag.Usage = func() {
-		mainUsage(os.Stderr)
-	}
-	flag.Parse()
-	main1()
-	os.Exit(exitCode)
+	os.Exit(main1())
 }
 
-func main1() {
+func main1() int {
 	if dir, err := os.Getwd(); err == nil {
 		cwd = dir
 	} else {
@@ -77,18 +72,17 @@ func main1() {
 	}
 	flag.Usage = func() {
 		mainUsage(os.Stderr)
-		os.Exit(2)
 	}
 	flag.Parse()
 	if flag.NArg() == 0 {
 		mainUsage(os.Stderr)
-		os.Exit(2)
+		return 2
 	}
 	cmdName := flag.Arg(0)
 	args := flag.Args()[1:]
 	if cmdName == "help" {
 		runHelp(args)
-		os.Exit(0)
+		return 0
 	}
 	for _, cmd := range commands {
 		if cmd.Name() != cmdName {
@@ -96,11 +90,11 @@ func main1() {
 		}
 		cmd.Flag.Usage = func() { cmd.Usage() }
 		cmd.Flag.Parse(args)
-		cmd.Run(cmd, cmd.Flag.Args())
-		os.Exit(exitCode)
+		rcode := cmd.Run(cmd, cmd.Flag.Args())
+		return max(exitCode, rcode)
 	}
 	errorf("gohack %s: unknown command\nRun 'gohack help' for usage\n", cmdName)
-	os.Exit(2)
+	return 2
 }
 
 const debug = false
@@ -115,4 +109,11 @@ func errorf(f string, a ...interface{}) {
 		}
 	}
 	exitCode = 1
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

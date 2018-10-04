@@ -11,6 +11,8 @@ github.com/rogpeppe/modinternal v0.0.6 h1:zLBVnSqEVV5Xwuek9ppzvyWWIXpNjzoR327f/C
 github.com/rogpeppe/modinternal v0.0.6/go.mod h1:ZcNGa6Cs2EyQbmeye4rPuDZFEAwOFLCG0r6VrtwyI40=
 github.com/rogpeppe/modinternal v0.0.7 h1:/PxrZHLvGRAT2GKI3zPoCLeKk2bT+5Xv71apuSJAr6k=
 github.com/rogpeppe/modinternal v0.0.7/go.mod h1:ZcNGa6Cs2EyQbmeye4rPuDZFEAwOFLCG0r6VrtwyI40=
+github.com/rogpeppe/modinternal v0.0.8 h1:9yVrtNKmE/8nkaE4l4R41S9RCuFjSCDvNrg5mDt4gKA=
+github.com/rogpeppe/modinternal v0.0.8/go.mod h1:VZPIayjD2tZn7puillpQg/dkQMCjWkE11SakFLjdLoc=
 github.com/rogpeppe/testscript v0.0.0-20180926220844-0b67330a46da h1:rbSLBhYitduXznf2v/4dkVyLZU+9pecGFBmsJpbsDrA=
 github.com/rogpeppe/testscript v0.0.0-20180926220844-0b67330a46da/go.mod h1:7ODaa/ORb+fWYRrWHqrZjf6q5AKkENFAdj63LLMk7I4=
 github.com/rogpeppe/testscript v0.0.0-20180930071333-4b2ab58a1a5a/go.mod h1:7ODaa/ORb+fWYRrWHqrZjf6q5AKkENFAdj63LLMk7I4=
@@ -22,3 +24,5 @@ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/errgo.v2 v2.0.1 h1:CgqZXIkG0gbG2ftc+1BN2aSjFD4py1iAxxJZheiGFes=
 gopkg.in/errgo.v2 v2.0.1/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
+gopkg.in/errgo.v2 v2.1.0 h1:0vLT13EuvQ0hNvakwLuFZ/jYrLp5F3kcWHXdRggjCE8=
+gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=

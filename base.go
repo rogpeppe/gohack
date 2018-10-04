@@ -9,9 +9,9 @@ import (
 
 // A Command is an implementation of a gohack command.
 type Command struct {
-	// Run runs the command.
+	// Run runs the command and returns its exit status.
 	// The args are the arguments after the command name.
-	Run func(cmd *Command, args []string)
+	Run func(cmd *Command, args []string) int
 
 	// UsageLine is the one-line usage message.
 	// The first word in the line is taken to be the command name.
@@ -34,5 +34,4 @@ func (c *Command) Name() string {
 func (c *Command) Usage() {
 	fmt.Fprintf(os.Stderr, "usage: %s\n", c.UsageLine)
 	fmt.Fprintf(os.Stderr, "Run 'gohack help %s' for details.\n", c.Name())
-	os.Exit(2)
 }
