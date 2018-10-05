@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/errgo.v2/fmt/errors"
 
-	"github.com/rogpeppe/modinternal/modfile"
-	"github.com/rogpeppe/modinternal/module"
+	"github.com/rogpeppe/go-internal/modfile"
+	"github.com/rogpeppe/go-internal/module"
 )
 
 var getCommand = &Command{
