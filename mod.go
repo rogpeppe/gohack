@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rogpeppe/modinternal/dirhash"
+	"github.com/rogpeppe/go-internal/dirhash"
 	"golang.org/x/tools/go/vcs"
 	"gopkg.in/errgo.v2/fmt/errors"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rogpeppe/modinternal/modfile"
+	"github.com/rogpeppe/go-internal/modfile"
 	"gopkg.in/errgo.v2/fmt/errors"
 )
 

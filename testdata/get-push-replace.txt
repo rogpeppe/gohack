@@ -12,7 +12,6 @@ grep '99 bottles of beer' $GOHACK/rsc.io/sampler/hello.go
 grep 'rsc\.io/sampler => .*/gohack/rsc\.io/sampler *// was rsc.io/sampler v1.3.0 => rsc.io/sampler v1.99.99 // old comment$' go.mod
 
 # Undoing the gohack should restore the original replace statement.
-exec cat go.mod
 gohack undo
 grep 'rsc.io/sampler v1.3.0 => rsc.io/sampler v1.99.99 // old comment$'  go.mod
 

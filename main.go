@@ -81,8 +81,7 @@ func main1() int {
 	cmdName := flag.Arg(0)
 	args := flag.Args()[1:]
 	if cmdName == "help" {
-		runHelp(args)
-		return 0
+		return runHelp(args)
 	}
 	for _, cmd := range commands {
 		if cmd.Name() != cmdName {
