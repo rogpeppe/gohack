@@ -1,0 +1,29 @@
+# Get a module that has no go.mod file. Gohack should add the
+# go.mod file for us.
+cd repo
+go get rsc.io/sampler@v1.2.1
+env GOHACK=$WORK/gohack
+gohack get rsc.io/sampler
+
+exists $GOHACK/rsc.io/sampler/go.mod
+gohack undo rsc.io/sampler
+exists $GOHACK/rsc.io/sampler/go.mod
+
+# Run gohack get a second time.
+# This should reuse the same directory, which it should
+# consider clean even though it contains the auto-generated
+# go.mod file.
+gohack get rsc.io/sampler
+stdout '^rsc.io/sampler => .*/gohack/rsc.io/sampler$'
+grep -count=1 '^replace rsc\.io/sampler => .*/gohack/rsc.io/sampler$' go.mod
+
+-- repo/main.go --
+package main
+import (
+	_ "rsc.io/sampler"
+)
+
+func main() {}
+
+-- repo/go.mod --
+module example.com/repo

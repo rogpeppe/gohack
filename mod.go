@@ -11,18 +11,28 @@ import (
 )
 
 // hashDir is like dirhash.HashDir except that it ignores the
-// gohack hash file in the top level directory.
-func hashDir(dir string) (string, error) {
+// gohack hash file in the top level directory, and auto-generated
+// go.mod files.
+func hashDir(dir string, modulePath string) (string, error) {
 	files, err := dirhash.DirFiles(dir, "")
 	if err != nil {
 		return "", err
 	}
 	j := 0
 	for _, f := range files {
-		if f != hashFile {
-			files[j] = f
-			j++
+		if f == hashFile {
+			continue
+		} else if f == "go.mod" {
+			ok, err := isAutoGoMod(filepath.Join(dir, f), modulePath)
+			if err != nil {
+				return "", errors.Wrap(err)
+			}
+			if ok {
+				continue
+			}
 		}
+		files[j] = f
+		j++
 	}
 	files = files[:j]
 	return dirhash.Hash1(files, func(name string) (io.ReadCloser, error) {
