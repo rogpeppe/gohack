@@ -1,0 +1,22 @@
+cd repo
+gohack undo
+stdout 'dropped gopkg.in/errgo.v2'
+
+grep '^replace gopkg.in/errgo.v2 => github.com/rogpeppe/test2/arble v0.0.0-20181008213029-f6022c873160$' go.mod
+
+-- repo/main.go --
+package main
+import _ "gopkg.in/errgo.v2"
+
+-- repo/go.mod --
+module example.com/repo
+
+require gopkg.in/errgo.v2 v2.1.0
+
+replace gopkg.in/errgo.v2 => ../foo // was gopkg.in/errgo.v2 => github.com/rogpeppe/test2/arble v0.0.0-20181008213029-f6022c873160
+
+-- foo/foo.go --
+package foo
+
+-- foo/go.mod --
+module example.com/foo

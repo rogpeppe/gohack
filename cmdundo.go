@@ -74,14 +74,17 @@ func cmdUndo1(modules []string) error {
 		prevReplace := splitWasComment(comments.Suffix[0].Token)
 		if prevReplace != nil && prevReplace.Old.Path == r.Old.Path {
 			// We're popping the old replace statement.
-			if !r.Syntax.InBlock {
-				// When we're not in a block, we don't need the "replace" token.
+			if r.Syntax.InBlock {
+				// When we're in a block, we don't need the "replace" token.
 				prevReplace.Syntax.Token = prevReplace.Syntax.Token[1:]
 			}
 			// Preserve any before and after comments.
 			prevReplace.Syntax.Before = r.Syntax.Before
 			prevReplace.Syntax.After = r.Syntax.After
-			*r = *prevReplace
+			r.Old = prevReplace.Old
+			r.New = prevReplace.New
+			r.Syntax.Comments.Suffix = prevReplace.Syntax.Comments.Suffix
+			r.Syntax.Token = prevReplace.Syntax.Token
 		} else {
 			// It's not a "was" comment. Just remove it (after this loop so we don't
 			// interfere with the current range statement).
