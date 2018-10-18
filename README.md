@@ -25,7 +25,7 @@ Install gohack with:
 
 To make a mutable checkout of a module, say `example.com/foo/bar`, run:
 
-	gohack get example.com/foo/bar
+	gohack example.com/foo/bar
 
 This will clone the module's repository to
 `$HOME/gohack/example.com/foo/bar`, check out the correct version of the
