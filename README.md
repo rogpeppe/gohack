@@ -23,6 +23,10 @@ Install gohack with:
 
 	go get github.com/rogpeppe/gohack
 
+or use [`gobin`](https://github.com/myitcv/gobin):
+
+	gobin github.com/rogpeppe/gohack
+
 To make a mutable checkout of a module, say `example.com/foo/bar`, run:
 
 	gohack get example.com/foo/bar
