@@ -22,6 +22,7 @@ into a directory where they can be edited.
 
 It uses $HOME/gohack/<module> as the destination directory.
 (TODO implement directory overriding)
+For now, you can modify the env var $GOHACK with the replacement path.
 
 By default it copies module source code from the existing
 source directory in $GOPATH/pkg/mod. If the -vcs
