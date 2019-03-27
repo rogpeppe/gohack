@@ -112,9 +112,18 @@ func getVCSInfoForModule(m *listModule) (*moduleVCSInfo, error) {
 // used for storing the module with the given path.
 func moduleDir(module string) string {
 	// TODO decide what color this bikeshed should be.
-	d := os.Getenv("GOHACK")
+	d := filepath.FromSlash(os.Getenv("GOHACK"))
 	if d == "" {
 		d = filepath.Join(os.Getenv("HOME"), "gohack")
 	}
-	return filepath.Join(d, filepath.FromSlash(module))
+
+	return join(d, filepath.FromSlash(module))
+}
+
+func join(ps ...string) string {
+	res := filepath.Join(ps...)
+	if !filepath.IsAbs(res) && res[0] != '.' {
+		res = "." + string(os.PathSeparator) + res
+	}
+	return res
 }
