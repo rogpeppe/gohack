@@ -1,5 +1,11 @@
 language: go
 go_import_path: github.com/rogpeppe/gohack
-go: 
-  - "1.11"
+go:
+  - "1.11.x"
+  - "1.12.x"
+env:
+  global:
+    - GO111MODULE=on
+install: "echo no install step required"
 script: go test ./...
+
