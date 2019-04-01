@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-
-	"gopkg.in/errgo.v2/fmt/errors"
 )
 
 var statusCommand = &Command{
@@ -30,11 +28,7 @@ func cmdStatus(_ *Command, args []string) int {
 }
 
 func printReplacementInfo() error {
-	m, err := goModInfo()
-	if err != nil {
-		return errors.Wrap(err)
-	}
-	for _, r := range m.Replace {
+	for _, r := range mainModFile.Replace {
 		if r.Old.Version == "" && r.New.Version == "" {
 			fmt.Printf("%s => %s\n", r.Old.Path, r.New.Path)
 		}

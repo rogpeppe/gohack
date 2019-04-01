@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/rogpeppe/go-internal/dirhash"
 	"golang.org/x/tools/go/vcs"
@@ -45,8 +46,10 @@ type moduleVCSInfo struct {
 	module *listModule
 	// alreadyExists holds whether the replacement directory already exists.
 	alreadyExists bool
-	// dir holds the path to the replacement directory.
+	// dir holds the absolute path to the replacement directory.
 	dir string
+	// replDir holds the path to use for the module in the go.mod replace directive.
+	replDir string
 	// root holds information on the VCS root of the module.
 	root *vcs.RepoRoot
 	// vcs holds the implementation of the VCS used by the module.
@@ -71,7 +74,10 @@ func getVCSInfoForModule(m *listModule) (*moduleVCSInfo, error) {
 	if !ok {
 		return nil, errors.Newf("unknown VCS kind %q", root.VCS.Cmd)
 	}
-	dir := moduleDir(m.Path)
+	dir, replDir, err := moduleDir(m.Path)
+	if err != nil {
+		return nil, errors.Notef(err, nil, "failed to determine target directory for %v", m.Path)
+	}
 	dirInfo, err := os.Stat(dir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, errors.Wrap(err)
@@ -84,6 +90,7 @@ func getVCSInfoForModule(m *listModule) (*moduleVCSInfo, error) {
 		root:          root,
 		alreadyExists: err == nil,
 		dir:           dir,
+		replDir:       replDir,
 		vcs:           v,
 	}
 	if !info.alreadyExists {
@@ -108,22 +115,38 @@ func getVCSInfoForModule(m *listModule) (*moduleVCSInfo, error) {
 	return info, nil
 }
 
-// moduleDir returns the path to the directory to be
-// used for storing the module with the given path.
-func moduleDir(module string) string {
-	// TODO decide what color this bikeshed should be.
-	d := filepath.FromSlash(os.Getenv("GOHACK"))
+// moduleDir returns the path to the directory to be used for storing the
+// module with the given path, as well as the filepath to be used in a replace
+// directive. If $GOHACK is set then it will be used. A relative $GOHACK will
+// be interpreted relative to main module directory.
+func moduleDir(module string) (path string, replPath string, err error) {
+	modfp := filepath.FromSlash(module)
+	d := os.Getenv("GOHACK")
 	if d == "" {
-		d = filepath.Join(os.Getenv("HOME"), "gohack")
+		uhd, err := UserHomeDir()
+		if err != nil {
+			return "", "", errors.Notef(err, nil, "failed to determine user home dir")
+		}
+		path = filepath.Join(uhd, "gohack", modfp)
+		return path, path, nil
 	}
 
-	return join(d, filepath.FromSlash(module))
-}
-
-func join(ps ...string) string {
-	res := filepath.Join(ps...)
-	if !filepath.IsAbs(res) && res[0] != '.' {
-		res = "." + string(os.PathSeparator) + res
+	if filepath.IsAbs(d) {
+		path = filepath.Join(d, modfp)
+		return path, path, nil
 	}
-	return res
+
+	replPath = filepath.Join(d, modfp)
+	if !strings.HasPrefix(replPath, ".."+string(os.PathSeparator)) {
+		// We know replPath is relative, but filepath.Join strips any leading
+		// "./" prefix, and we need that in the replace directive because
+		// otherwise the path will be treated as a module path rather than a
+		// relative file path, so add it back.
+		replPath = "." + string(os.PathSeparator) + replPath
+	}
+
+	mainModDir := filepath.Dir(mainModFile.Syntax.Name)
+	path = filepath.Join(mainModDir, replPath)
+
+	return path, replPath, err
 }

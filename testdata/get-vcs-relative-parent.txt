@@ -1,7 +1,15 @@
+# This is same as get.txt except that we use the -vcs flag on gohack get with a
+# parent-relative GOHACK set. Until we can figure out better, this requires
+# access to the network.
+
+[!net] skip
+[!exec:git] skip
+env GOPROXY=
+
 cd repo/dummy
 go get rsc.io/quote@v1.5.2
 env GOHACK=../gohack
-gohack get rsc.io/quote
+gohack get -vcs rsc.io/quote
 stdout '^rsc.io/quote => \.\./gohack/rsc.io/quote$'
 ! stderr .+
 
@@ -11,6 +19,9 @@ cd ..
 # Check that the replace statement is there.
 grep -count=1 '^replace rsc\.io/quote => \.\./gohack/rsc.io/quote$' go.mod
 
+# Check that it's a git repository
+exists ../gohack/rsc.io/quote/.git
+
 # Check that the source files have been copied.
 exists ../gohack/rsc.io/quote/quote.go
 
@@ -18,6 +29,7 @@ exists ../gohack/rsc.io/quote/quote.go
 go install example.com/repo
 
 -- repo/main.go --
+
 package main
 import (
 	"fmt"
@@ -34,6 +46,9 @@ func main() {
 // directory so that the gohack command can be run from
 // within the dummy directory
 
-
 -- repo/go.mod --
 module example.com/repo
+
+-- bogus.go --
+
+package wrong

@@ -61,10 +61,6 @@ func runGet1(args []string) error {
 		// Perhaps we should be more resilient in that case?
 		return errors.Notef(err, nil, "cannot get module info")
 	}
-	modf, err := goModInfo()
-	if err != nil {
-		return errors.Notef(err, nil, "cannot get local module info")
-	}
 	for _, mpath := range args {
 		m := mods[mpath]
 		if m == nil {
@@ -74,7 +70,7 @@ func runGet1(args []string) error {
 		// Early check that we can replace the module, so we don't
 		// do all the work to check it out only to find we can't
 		// add the replace directive.
-		if err := checkCanReplace(modf, mpath); err != nil {
+		if err := checkCanReplace(mainModFile, mpath); err != nil {
 			errorf("%v", err)
 			continue
 		}
@@ -99,9 +95,8 @@ func runGet1(args []string) error {
 			}
 			repl = repl1
 		}
-		// Automatically generate a go.mod file if one doesn't
-		// already exist, because otherwise the directory cannot be
-		// used as a module.
+		// Automatically generate a go.mod file if one doesn't already exist,
+		// because otherwise the directory cannot be used as a module.
 		if err := ensureGoModFile(repl.modulePath, repl.dir); err != nil {
 			errorf("%v", err)
 		}
@@ -110,14 +105,14 @@ func runGet1(args []string) error {
 	if len(repls) == 0 {
 		return errors.New("all modules failed; not replacing anything")
 	}
-	if err := replace(modf, repls); err != nil {
+	if err := replace(mainModFile, repls); err != nil {
 		return errors.Notef(err, nil, "cannot replace")
 	}
-	if err := writeModFile(modf); err != nil {
+	if err := writeModFile(mainModFile); err != nil {
 		return errors.Wrap(err)
 	}
 	for _, info := range repls {
-		fmt.Printf("%s => %s\n", info.modulePath, info.dir)
+		fmt.Printf("%s => %s\n", info.modulePath, info.replDir)
 	}
 	return nil
 }
@@ -130,7 +125,10 @@ func updateFromLocalDir(m *listModule) (*modReplace, error) {
 	if err != nil {
 		return nil, errors.Notef(err, nil, "cannot hash %q", m.Dir)
 	}
-	destDir := moduleDir(m.Path)
+	destDir, replDir, err := moduleDir(m.Path)
+	if err != nil {
+		return nil, errors.Notef(err, nil, "failed to determine target directory for %v", m.Path)
+	}
 	_, err = os.Stat(destDir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, errors.Wrap(err)
@@ -138,6 +136,7 @@ func updateFromLocalDir(m *listModule) (*modReplace, error) {
 	repl := &modReplace{
 		modulePath: m.Path,
 		dir:        destDir,
+		replDir:    replDir,
 	}
 	if err != nil {
 		// Destination doesn't exist. Copy the entire directory.
@@ -234,18 +233,22 @@ func updateVCSDir(m *listModule) (*modReplace, error) {
 	return &modReplace{
 		modulePath: m.Path,
 		dir:        info.dir,
+		replDir:    info.replDir,
 	}, nil
 }
 
 type modReplace struct {
+	// modulePath is the module path
 	modulePath string
-	dir        string
+	// dir holds the absolute path to the replacement directory.
+	dir string
+	// replDir holds the path to use for the module in the go.mod replace directive.
+	replDir string
 }
 
 func replace(f *modfile.File, repls []*modReplace) error {
 	for _, repl := range repls {
-		// TODO should we use relative path here?
-		if err := replaceModule(f, repl.modulePath, repl.dir); err != nil {
+		if err := replaceModule(f, repl.modulePath, repl.replDir); err != nil {
 			return errors.Wrap(err)
 		}
 	}

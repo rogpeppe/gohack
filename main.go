@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rogpeppe/go-internal/modfile"
 	"gopkg.in/errgo.v2/fmt/errors"
 )
 
@@ -52,6 +53,8 @@ var (
 var (
 	exitCode = 0
 	cwd      = "."
+
+	mainModFile *modfile.File
 )
 
 var commands = []*Command{
@@ -68,7 +71,7 @@ func main1() int {
 	if dir, err := os.Getwd(); err == nil {
 		cwd = dir
 	} else {
-		errorf("cannot get current working directory: %v", err)
+		return errorf("cannot get current working directory: %v", err)
 	}
 	flag.Usage = func() {
 		mainUsage(os.Stderr)
@@ -83,22 +86,40 @@ func main1() int {
 	if cmdName == "help" {
 		return runHelp(args)
 	}
-	for _, cmd := range commands {
-		if cmd.Name() != cmdName {
-			continue
+	var cmd *Command
+	for _, c := range commands {
+		if c.Name() == cmdName {
+			cmd = c
+			break
 		}
-		cmd.Flag.Usage = func() { cmd.Usage() }
-		cmd.Flag.Parse(args)
-		rcode := cmd.Run(cmd, cmd.Flag.Args())
-		return max(exitCode, rcode)
 	}
-	errorf("gohack %s: unknown command\nRun 'gohack help' for usage\n", cmdName)
-	return 2
+	if cmd == nil {
+		errorf("gohack %s: unknown command\nRun 'gohack help' for usage\n", cmdName)
+		return 2
+	}
+
+	cmd.Flag.Usage = func() { cmd.Usage() }
+
+	if err := cmd.Flag.Parse(args); err != nil {
+		if err != flag.ErrHelp {
+			errorf(err.Error())
+		}
+		return 2
+	}
+
+	if mf, err := goModInfo(); err == nil {
+		mainModFile = mf
+	} else {
+		return errorf("cannot determine main module: %v", err)
+	}
+
+	rcode := cmd.Run(cmd, cmd.Flag.Args())
+	return max(exitCode, rcode)
 }
 
 const debug = false
 
-func errorf(f string, a ...interface{}) {
+func errorf(f string, a ...interface{}) int {
 	fmt.Fprintln(os.Stderr, fmt.Sprintf(f, a...))
 	if debug {
 		for _, arg := range a {
@@ -108,6 +129,7 @@ func errorf(f string, a ...interface{}) {
 		}
 	}
 	exitCode = 1
+	return exitCode
 }
 
 func max(a, b int) int {
