@@ -1,6 +1,5 @@
-# This is thame as get.txt except that we use the -vcs flag
-# on gohack get. Until we can figure out better, this requires
-# access to the network.
+# This is same as get.txt except that we use the -vcs flag on gohack get. Until
+# we can figure out better, this requires access to the network.
 
 [!net] skip
 [!exec:git] skip

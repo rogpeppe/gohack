@@ -39,10 +39,6 @@ func cmdUndo(_ *Command, args []string) int {
 }
 
 func cmdUndo1(modules []string) error {
-	modFile, err := goModInfo()
-	if err != nil {
-		return errors.Wrap(err)
-	}
 	modMap := make(map[string]bool)
 	if len(modules) > 0 {
 		for _, m := range modules {
@@ -51,7 +47,7 @@ func cmdUndo1(modules []string) error {
 	} else {
 		// With no modules specified, we un-gohack all modules
 		// we can find with local directory info in the go.mod file.
-		for _, r := range modFile.Replace {
+		for _, r := range mainModFile.Replace {
 			if r.Old.Version == "" && r.New.Version == "" {
 				modMap[r.Old.Path] = true
 				modules = append(modules, r.Old.Path)
@@ -59,7 +55,7 @@ func cmdUndo1(modules []string) error {
 		}
 	}
 	drop := make(map[string]bool)
-	for _, r := range modFile.Replace {
+	for _, r := range mainModFile.Replace {
 		if !modMap[r.Old.Path] || r.Old.Version != "" || r.New.Version != "" {
 			continue
 		}
@@ -93,7 +89,7 @@ func cmdUndo1(modules []string) error {
 		delete(modMap, r.Old.Path)
 	}
 	for m := range drop {
-		if err := modFile.DropReplace(m, ""); err != nil {
+		if err := mainModFile.DropReplace(m, ""); err != nil {
 			return errors.Notef(err, nil, "cannot drop replacement for %v", m)
 		}
 	}
@@ -105,7 +101,7 @@ func cmdUndo1(modules []string) error {
 	for _, m := range failed {
 		errorf("%s not currently replaced; cannot drop", m)
 	}
-	if err := writeModFile(modFile); err != nil {
+	if err := writeModFile(mainModFile); err != nil {
 		return errors.Wrap(err)
 	}
 	for _, m := range modules {
