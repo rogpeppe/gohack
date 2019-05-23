@@ -19,7 +19,7 @@ Luckily the modules system provides a way around this: you can add a
 of a directory holding a module for the readonly cached copy. You can of
 course do this manually, but gohack aims to make this process pain-free.
 
-Install gohack with:
+## Install gohack with
 
 	go get github.com/rogpeppe/gohack
 
@@ -27,15 +27,29 @@ or use [`gobin`](https://github.com/myitcv/gobin):
 
 	gobin github.com/rogpeppe/gohack
 
-To make a mutable checkout of a module, say `example.com/foo/bar`, run:
+## For quick edits to a module (without version control information)
+If the module to edit is `example.com/foo/bar`, run:
 
 	gohack get example.com/foo/bar
 
-This will clone the module's repository to
-`$HOME/gohack/example.com/foo/bar`, check out the correct version of the
-source code there, and add a replace directive in the local `go.mod` file:
+This will make a _copy_ of the module into `$HOME/gohack/example.com/foo/bar` and
+add replace directives to the local `go.mod` file:
 
 	replace example.com/foo/bar /home/rog/gohack/example.com/foo/bar
+
+__Note__: This copy will __not__ include version control system information so
+it is best for quick edits that aren't intended to land back into version control.
+
+## To edit the module with full version control
+Run:
+
+	gohack get -vcs example.com/foo/bar
+
+This will _clone_ the module's repository to
+`$HOME/gohack/example.com/foo/bar`, check out the correct version of the
+source code there and add the replace directive into the local `go.mod` file.
+
+## Undoing replacements
 
 Once you are done hacking and wish to revert to the immutable version, you
 can remove the replace statement with:
