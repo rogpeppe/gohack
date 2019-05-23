@@ -29,11 +29,8 @@ If the -vcs flag is provided, it also checks out VCS information for the modules
 
 With no module arguments and the -u flag, it will try to update all currently gohacked modules.
 
-gohack status [
-
-Status prints
-gohack diff module
-Diff prints (in git style) changes that have been made to the module since it was checked out.
+gohack status
+Status prints a list of the replaced modules
 
 gohack rm [-f] module...
 Rm removes the gohack directory if it is clean and then runs gohack undo. If the -f flag is provided, the directory is removed even if it's not clean.
