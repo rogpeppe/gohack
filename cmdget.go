@@ -276,6 +276,10 @@ func updateModule(info *moduleVCSInfo) error {
 		}
 		isTag = false
 		updateTo = revID
+	} else {
+		// Not a pseudo-version. However, this can still be in the form
+		// of "<validtag>+incompatible", so trim the suffix.
+		updateTo = strings.TrimSuffix(updateTo, "+incompatible")
 	}
 	if err := info.vcs.Update(info.dir, isTag, updateTo); err == nil {
 		fmt.Printf("updated hack version of %s to %s\n", info.module.Path, info.module.Version)
