@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -56,29 +57,35 @@ func listModules(modules ...string) (mods map[string]*listModule, err error) {
 	return mods, nil
 }
 
-func goModInfo() (*modfile.File, error) {
-	// Get info on the current module so that we can find the
-	// path to the current go.mod file.
-	mods, err := listModules()
+// goModInfo returns the main module's root directory
+// and the parsed contents of the go.mod file.
+func goModInfo() (string, *modfile.File, error) {
+	goModPath, err := findGoMod(cwd)
 	if err != nil {
-		return nil, errors.Wrap(err)
+		return "", nil, errors.Notef(err, nil, "cannot find main module")
 	}
-	if len(mods) != 1 {
-		return nil, errors.Newf("unexpected module list count (want 1 got %d)", len(mods))
-	}
-	var goModPath string
-	for _, m := range mods {
-		goModPath = m.GoMod
-	}
+	rootDir := filepath.Dir(goModPath)
 	data, err := ioutil.ReadFile(goModPath)
 	if err != nil {
-		return nil, errors.Notef(err, nil, "cannot read current go.mod file")
+		return "", nil, errors.Notef(err, nil, "cannot read main go.mod file")
 	}
 	modf, err := modfile.Parse(goModPath, data, nil)
 	if err != nil {
-		return nil, errors.Wrap(err)
+		return "", nil, errors.Wrap(err)
 	}
-	return modf, nil
+	return rootDir, modf, nil
+}
+
+func findGoMod(dir string) (string, error) {
+	out, err := runCmd(dir, "go", "env", "GOMOD")
+	if err != nil {
+		return "", err
+	}
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return "", errors.New("no go.mod file found in any parent directory")
+	}
+	return strings.TrimSpace(out), nil
 }
 
 func writeModFile(modf *modfile.File) error {

@@ -104,7 +104,7 @@ func main1() int {
 		return 2
 	}
 
-	if mf, err := goModInfo(); err == nil {
+	if _, mf, err := goModInfo(); err == nil {
 		mainModFile = mf
 	} else {
 		return errorf("cannot determine main module: %v", err)
