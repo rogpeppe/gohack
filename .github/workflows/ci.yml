@@ -1,0 +1,23 @@
+on: [push]
+
+name: Go
+jobs:
+  test:
+    strategy:
+      matrix:
+        x: ["1"]
+        v: [".12.8"]
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: "${{ matrix.x }}${{ matrix.v}}"
+    - name: Checkout code
+      uses: actions/checkout@v1
+    - name: Test
+      env:
+        GO111MODULE: "on"
+        GOPROXY: "https://proxy.golang.org"
+      run: go test ./...
