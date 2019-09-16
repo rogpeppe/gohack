@@ -1,0 +1,2 @@
+! gohack get nothing
+stderr 'cannot find main module: no go.mod file found in any parent directory'
