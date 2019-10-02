@@ -1,0 +1,34 @@
+cd repo
+go get golang.org/x/text
+env GOHACK=$WORK/gohack
+gohack get golang.org/x/text/language
+# Check that golang.org/x/text/language resolved
+# to golang.org/x/text by examining stdout.
+# Trust the other get tests to ensure that everything else went ok.
+stdout '^golang.org/x/text  => .*/gohack/golang.org/x/text$'
+! stderr .+
+
+gohack undo
+! stderr .+
+
+# Check that deduplication works across modules and packages.
+gohack get golang.org/x/text golang.org/x/text/language golang.org/x/text/unused
+stdout '^golang.org/x/text => .*/gohack/golang.org/x/text$'
+! stdout language
+! stdout unused
+! stderr .+
+
+-- repo/main.go --
+package main
+import (
+	"golang.org/x/text/language"
+	_ "golang.org/x/text/unused"
+)
+
+var _ = language.Make
+
+func main() {
+}
+
+-- repo/go.mod --
+module example.com/repo
