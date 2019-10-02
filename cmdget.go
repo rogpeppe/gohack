@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/errgo.v2/fmt/errors"
@@ -14,11 +15,13 @@ import (
 )
 
 var getCommand = &Command{
-	UsageLine: "get [-vcs] [-u] [-f] [module...]",
+	UsageLine: "get [-vcs] [-u] [-f] [module/package...]",
 	Short:     "start hacking a module",
 	Long: `
 The get command checks out Go module dependencies
 into a directory where they can be edited.
+If a package is named, its containing module
+is checked out.
 
 It uses $GOHACK/<module> as the destination directory,
 or $HOME/gohack/<module> if $GOHACK is empty.
@@ -61,12 +64,39 @@ func runGet1(args []string) error {
 		// Perhaps we should be more resilient in that case?
 		return errors.Notef(err, nil, "cannot get module info")
 	}
-	for _, mpath := range args {
-		m := mods[mpath]
-		if m == nil {
-			errorf("module %q does not appear to be in use", mpath)
+	// Args could be package paths or modules.
+	// Resolve them all to modules, deduplicate, and sort.
+	resolved := make(map[string]bool)
+	for _, arg := range args {
+		if _, ok := mods[arg]; ok {
+			// module in use
+			resolved[arg] = true
 			continue
 		}
+		// Either a package path, or an unused module.
+		// Try to resolve as a package path.
+		out, err := runCmd(cwd, "go", "list", "-f", "{{with .Module}}{{.Path}}{{end}}", arg)
+		if err == nil {
+			// Resolved to a module. Is it in use?
+			out = strings.TrimSpace(out)
+			if _, ok := mods[out]; ok {
+				resolved[out] = true
+				continue
+			}
+		}
+		// Either an unused module, or an invalid package path,
+		// or a valid package path that resolves to an unused module,
+		// or something else.
+		errorf("module/package %q does not appear to be in use", arg)
+	}
+	mpaths := make([]string, 0, len(resolved))
+	for mpath := range resolved {
+		mpaths = append(mpaths, mpath)
+	}
+	sort.Strings(mpaths)
+
+	for _, mpath := range mpaths {
+		m := mods[mpath] // must be present, by construction (above)
 		// Early check that we can replace the module, so we don't
 		// do all the work to check it out only to find we can't
 		// add the replace directive.
