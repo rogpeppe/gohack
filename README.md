@@ -35,7 +35,7 @@ If the module to edit is `example.com/foo/bar`, run:
 This will make a _copy_ of the module into `$HOME/gohack/example.com/foo/bar` and
 add replace directives to the local `go.mod` file:
 
-	replace example.com/foo/bar /home/rog/gohack/example.com/foo/bar
+	replace example.com/foo/bar => /home/rog/gohack/example.com/foo/bar
 
 __Note__: This copy will __not__ include version control system information so
 it is best for quick edits that aren't intended to land back into version control.
