@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	"strings"
+	"text/template"
 )
 
 // runHelp implements the 'help' command.
