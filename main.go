@@ -21,7 +21,7 @@ As the amount of functionality grows, it seems like we should consider having su
 
 A possible set of commands:
 
- gohack get [-vcs] [-u] [-f] [module...]
+ gohack get [-vcs] [-f] [module...]
 Get gets the modules at the current version and adds replace statements to the go.mod file if they're not already replaced.
 If the -u flag is provided, the source code will also be updated to the current version if it's clean.
 If the -f flag is provided with -u, the source code will be updated even if it's not clean.
