@@ -89,6 +89,7 @@ func findGoMod(dir string) (string, error) {
 }
 
 func writeModFile(modf *modfile.File) error {
+	modf.Cleanup()
 	data, err := modf.Format()
 	if err != nil {
 		return errors.Notef(err, nil, "cannot generate go.mod file")
