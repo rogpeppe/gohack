@@ -1,8 +1,8 @@
 # --help flag produces output to stderr and fails
 ! gohack get --help
-stderr '^usage: get \[-vcs] \[-u] \[-f] \[module...]\nRun ''gohack help get'' for details.\n'
+stderr '^usage: get \[-vcs] \[-f] \[module...]\nRun ''gohack help get'' for details.\n'
 ! stdout .+
 
 gohack help get
-stdout '^usage: get \[-vcs] \[-u] \[-f] \[module...]$'
+stdout '^usage: get \[-vcs] \[-f] \[module...]$'
 ! stderr .+

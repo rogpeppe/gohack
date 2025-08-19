@@ -14,7 +14,7 @@ import (
 )
 
 var getCommand = &Command{
-	UsageLine: "get [-vcs] [-u] [-f] [module...]",
+	UsageLine: "get [-vcs] [-f] [module...]",
 	Short:     "start hacking a module",
 	Long: `
 The get command checks out Go module dependencies
@@ -37,7 +37,7 @@ func init() {
 
 var (
 	// TODO implement getUpdate so that we can use gohack -f without
-	// overwriting source code.
+	// overwriting source code. When we do, add [-u] to the lists of flags that get takes.
 	// getUpdate = getCommand.Flag.Bool("u", false, "update to current version")
 	getForce = getCommand.Flag.Bool("f", false, "force update to current version even if not clean")
 	getVCS   = getCommand.Flag.Bool("vcs", false, "get VCS information too")
